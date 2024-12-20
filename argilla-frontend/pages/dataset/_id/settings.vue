@@ -2,13 +2,10 @@
   <BaseLoading v-if="isLoadingDataset" />
   <InternalPage v-else>
     <template v-slot:header>
-      <HeaderFeedbackTaskComponent
-        :datasetId="datasetId"
-        :breadcrumbs="breadcrumbs"
-      />
+      <HeaderFeedbackTask :datasetId="datasetId" :breadcrumbs="breadcrumbs" />
     </template>
     <template v-slot:page-header>
-      <TopDatasetSettingsFeedbackTaskContent
+      <TopDatasetSettingsFeedbackTask
         :separator="!isAdminOrOwnerRole"
         @goToDataset="goToDataset"
       />
@@ -23,6 +20,8 @@
         :tabs="tabs"
         tab-size="large"
         class="settings__tabs-content"
+        @onChanged="onTabChanged"
+        @onLoaded="onTabLoaded"
       >
         <template v-slot="{ currentComponent }">
           <component
@@ -45,13 +44,16 @@ export default {
   components: {
     InternalPage,
   },
+  beforeRouteLeave(to, from, next) {
+    this.goToOutside(next);
+  },
   setup() {
     return useDatasetSettingViewModel();
   },
 };
 </script>
 
-<styles lang="scss" scoped>
+<style lang="scss" scoped>
 .settings {
   &__tabs {
     &-content {
@@ -65,4 +67,4 @@ export default {
     }
   }
 }
-</styles>
+</style>
