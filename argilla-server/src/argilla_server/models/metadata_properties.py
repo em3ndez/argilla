@@ -17,8 +17,7 @@ from typing import Any, Generic, List, Literal, Optional, TypeVar, Union
 
 from argilla_server.enums import MetadataPropertyType
 from argilla_server.errors.future import UnprocessableEntityError
-from argilla_server.pydantic_v1 import BaseModel, Field
-from argilla_server.pydantic_v1.generics import GenericModel
+from pydantic import BaseModel, Field
 
 __all__ = [
     "MetadataPropertySettings",
@@ -41,14 +40,14 @@ class BaseMetadataPropertySettings(BaseModel, ABC):
 
 class TermsMetadataPropertySettings(BaseMetadataPropertySettings):
     type: Literal[MetadataPropertyType.terms]
-    values: Optional[List[str]] = None
+    values: Optional[List[Any]] = None
 
-    def check_metadata(self, value: Union[str, List[str]]) -> None:
+    def check_metadata(self, value: Any) -> None:
         if self.values is None:
             return
 
         values = value
-        if isinstance(values, str):
+        if not isinstance(values, list):
             values = [value]
 
         for v in values:
@@ -59,7 +58,7 @@ class TermsMetadataPropertySettings(BaseMetadataPropertySettings):
 NT = TypeVar("NT", int, float)
 
 
-class NumericMetadataPropertySettings(BaseMetadataPropertySettings, GenericModel, Generic[NT]):
+class NumericMetadataPropertySettings(BaseMetadataPropertySettings, BaseModel, Generic[NT]):
     min: Optional[NT] = None
     max: Optional[NT] = None
 

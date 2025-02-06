@@ -141,7 +141,7 @@ import argilla as rg
 from argilla.client.feedback.metrics import AgreementMetric
 
 feedback_dataset = rg.FeedbackDataset.from_argilla("...", workspace="...")
-metric = AgreementMetric(dataset=feedback_dataset, question_name="question_name")
+metric = AgreementMetric(dataset=feedback_dataset, field_name="text", question_name="question_name")
 agreement_metrics = metric.compute("alpha")
 # >>> agreement_metrics
 # [AgreementMetricResult(metric_name='alpha', count=1000, result=0.467889)]
@@ -156,7 +156,7 @@ import argilla as rg
 
 #dataset = rg.FeedbackDataset.from_huggingface("argilla/go_emotions_raw")
 
-agreement_metrics = dataset.compute_agreement_metrics(question_name="label", metric_names="alpha")
+agreement_metrics = dataset.compute_agreement_metrics(question_name="label", field_name="text", metric_names="alpha")
 agreement_metrics
 
 # AgreementMetricResult(metric_name='alpha', count=191792, result=0.2703263452657748)
@@ -183,7 +183,7 @@ We plan on adding more support for other metrics so feel free to reach out on ou
 
 #### Model Metrics
 
-In contrast to agreement metrics, where we compare the responses of annotators with each other, it is a good practice to evaluate the suggestions of models against the annotators as ground truths. As `FeedbackDataset` already offers the possibility to add `suggestions` to the responses, we can compare these initial predictions against the verified reponses. This will give us two important insights: how reliable the responses of a given annotator are, and how good the suggestions we are giving to the annotators are. This way, we can take action to improve the quality of the responses by making changes to the guidelines or the structure, and the suggestions given to the annotators by changing or updating the model we use. Note that each question type has a different set of metrics available.
+In contrast to agreement metrics, where we compare the responses of annotators with each other, it is a good practice to evaluate the suggestions of models against the annotators as ground truths. As `FeedbackDataset` already offers the possibility to add `suggestions` to the responses, we can compare these initial predictions against the verified responses. This will give us two important insights: how reliable the responses of a given annotator are, and how good the suggestions we are giving to the annotators are. This way, we can take action to improve the quality of the responses by making changes to the guidelines or the structure, and the suggestions given to the annotators by changing or updating the model we use. Note that each question type has a different set of metrics available.
 
 Here is an example use of the `compute` function to calculate the metrics for a `FeedbackDataset`:
 

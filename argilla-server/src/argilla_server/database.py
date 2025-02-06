@@ -11,20 +11,21 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+
 import os
+
 from collections import OrderedDict
-from sqlite3 import Connection as SQLite3Connection
-from typing import TYPE_CHECKING, Generator
+from typing import AsyncGenerator, Optional, Generator
 
-from sqlalchemy import event, make_url
+from sqlalchemy import create_engine, event, make_url
 from sqlalchemy.engine import Engine
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.engine.interfaces import IsolationLevel
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker, scoped_session, Session
 
-import argilla_server
 from argilla_server.settings import settings
 
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
+import argilla_server
 
 
 ALEMBIC_CONFIG_FILE = os.path.normpath(os.path.join(os.path.dirname(argilla_server.__file__), "alembic.ini"))
@@ -36,28 +37,20 @@ TAGGED_REVISIONS = OrderedDict(
         "1.13": "1e629a913727",
         "1.17": "84f6b9ff6076",
         "1.18": "bda6fe24314e",
+        "1.28": "ca7293c38970",
+        "2.0": "237f7c674d74",
+        "2.4": "660d6c6b3360",
+        "2.5": "580a6553186f",
     }
 )
 
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
-    if isinstance(dbapi_connection, SQLite3Connection):
+    if settings.database_is_sqlite:
         cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA foreign_keys = ON")
         cursor.close()
-
-
-async_engine = create_async_engine(settings.database_url)
-AsyncSessionLocal = async_sessionmaker(autocommit=False, expire_on_commit=False, bind=async_engine)
-
-
-async def get_async_db() -> Generator["AsyncSession", None, None]:
-    try:
-        db: "AsyncSession" = AsyncSessionLocal()
-        yield db
-    finally:
-        await db.close()
 
 
 def database_url_sync() -> str:
@@ -67,3 +60,38 @@ def database_url_sync() -> str:
     """
     database_url = make_url(settings.database_url)
     return settings.database_url.replace(f"+{database_url.get_driver_name()}", "")
+
+
+sync_engine = create_engine(database_url_sync(), **settings.database_engine_args)
+
+async_engine = create_async_engine(settings.database_url, **settings.database_engine_args)
+
+SyncSessionLocal = scoped_session(sessionmaker(autocommit=False, expire_on_commit=False, bind=sync_engine))
+
+AsyncSessionLocal = async_sessionmaker(autocommit=False, expire_on_commit=False, bind=async_engine)
+
+
+def get_sync_db() -> Generator[Session, None, None]:
+    db = SyncSessionLocal()
+
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
+    async for db in _get_async_db():
+        yield db
+
+
+async def _get_async_db(isolation_level: Optional[IsolationLevel] = None) -> AsyncGenerator[AsyncSession, None]:
+    db: AsyncSession = AsyncSessionLocal()
+
+    if isolation_level is not None:
+        await db.connection(execution_options={"isolation_level": isolation_level})
+
+    try:
+        yield db
+    finally:
+        await db.close()
